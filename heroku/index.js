@@ -5,69 +5,89 @@
  * This source code is licensed under the license found in the
  * LICENSE file in the root directory of this source tree.
  */
-const express = require('express');
-const bodyParser = require('body-parser');
-const request = require('request');
 
-const app = express();
+var bodyParser = require('body-parser');
+var express = require('express');
+var request = require('request');
+var xhub = require('express-x-hub');
+
+var app = express();
+app.set('port', (process.env.PORT || 5000));
+
+app.use(xhub({ algorithm: 'sha1', secret: process.env.APP_SECRET }));
 app.use(bodyParser.json());
 
-const VERIFY_TOKEN = 'YOUR_VERIFY_TOKEN';
+var token = process.env.TOKEN || 'token';
+var pageAccessToken = process.env.PAGE_ACCESS_TOKEN;
+var received_updates = [];
 
-// Route pour la vérification du webhook
-app.get('/webhook', (req, res) => {
-    const mode = req.query['hub.mode'];
-    const token = req.query['hub.verify_token'];
-    const challenge = req.query['hub.challenge'];
-
-    if (mode && token) {
-        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-            console.log('WEBHOOK_VERIFIED');
-            res.status(200).send(challenge);
-        } else {
-            res.sendStatus(403);
-        }
-    }
+app.get('/', function(req, res) {
+  console.log(req);
+  res.send('<pre>' + JSON.stringify(received_updates, null, 2) + '</pre>');
 });
 
-// Route pour gérer les événements
-app.post('/webhook', (req, res) => {
-    const body = req.body;
+app.get(['/facebook', '/instagram'], function(req, res) {
+  if (req.query['hub.mode'] == 'subscribe' && req.query['hub.verify_token'] == token) {
+    res.send(req.query['hub.challenge']);
+  } else {
+    res.sendStatus(400);
+  }
+});
 
-    if (body.object === 'page') {
-        body.entry.forEach(entry => {
-            const webhook_event = entry.messaging[0];
-            console.log(webhook_event);
+app.post('/facebook', function(req, res) {
+  console.log('Facebook request body:', req.body);
 
-            // Gérer les événements de la page ici
+  if (!req.isXHubValid()) {
+    console.log('Warning - request header X-Hub-Signature not present or invalid');
+    res.sendStatus(401);
+    return;
+  }
 
-            // Exemple: Si un message est posté, nous pourrions vouloir le modifier
-            if (webhook_event.message) {
-                const message_id = webhook_event.message.mid;
+  console.log('request header X-Hub-Signature validated');
+  // Process the Facebook updates here
+  received_updates.unshift(req.body);
 
-                // Appel à l'API Graph de Facebook pour modifier le message
-                request({
-                    uri: `https://graph.facebook.com/v20.0/${message_id}`,
-                    qs: { access_token: 'EAFzlgpi4cQMBOzDXAFaeRC7Gdk3Esdl2HCJvABxHQpFZAqSBo0ZBhudFSqcjODwP4hbPh4F9W044lZCI2RW3ZATgiCRRchU5FIjI2FEY6uBAIffCw2R8mdUfWidyOlgJnWxWZAHiwWZBB4IQbF1Y9dPgvnklIIylS0ffVeO1wjtlrXZCYNIAENBbEbeRZC11xNIZD' },
-                    method: 'POST',
-                    json: {
-                        message: 'Votre nouveau message modifié'
-                    }
-                }, (error, response, body) => {
-                    if (!error && response.statusCode == 200) {
-                        console.log('Message modifié avec succès');
-                    } else {
-                        console.error('Erreur lors de la modification du message:', error);
-                    }
-                });
-            }
+  // Example: Modify the post if a message is posted
+  if (req.body.entry) {
+    req.body.entry.forEach(function(entry) {
+      if (entry.changes) {
+        entry.changes.forEach(function(change) {
+          if (change.field === 'feed' && change.value.item === 'post' && change.value.verb === 'add') {
+            var postId = change.value.post_id;
+
+            // Modify the post using the Graph API
+            var newMessage = 'Votre message modifié';
+            var url = `https://graph.facebook.com/${postId}`;
+
+            request({
+              url: url,
+              qs: { access_token: pageAccessToken },
+              method: 'POST',
+              json: { message: newMessage }
+            }, function(error, response, body) {
+              if (!error && response.statusCode == 200) {
+                console.log('Post modified successfully');
+              } else {
+                console.error('Failed to modify the post:', error || body);
+              }
+            });
+          }
         });
+      }
+    });
+  }
 
-        res.status(200).send('EVENT_RECEIVED');
-    } else {
-        res.sendStatus(404);
-    }
+  res.sendStatus(200);
 });
 
-const PORT = process.env.PORT || 1337;
-app.listen(PORT, () => console.log(`Server is listening on port ${PORT}`));
+app.post('/instagram', function(req, res) {
+  console.log('Instagram request body:');
+  console.log(req.body);
+  // Process the Instagram updates here
+  received_updates.unshift(req.body);
+  res.sendStatus(200);
+});
+
+app.listen(app.get('port'), function() {
+  console.log('Node app is running on port', app.get('port'));
+});
