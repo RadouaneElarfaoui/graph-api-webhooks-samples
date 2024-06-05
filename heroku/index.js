@@ -38,7 +38,6 @@ app.get(['/facebook', '/instagram'], function(req, res) {
 
 app.post('/facebook', function(req, res) {
   console.log('Facebook request body:', req.body);
-
   if (!req.isXHubValid()) {
     console.log('Warning - request header X-Hub-Signature not present or invalid');
     res.sendStatus(401);
@@ -47,6 +46,45 @@ app.post('/facebook', function(req, res) {
 
   console.log('request header X-Hub-Signature validated');
   // Process the Facebook updates here
+// Parcourir les entrées dans le corps de la requête
+  if (req.body.entry) {
+    req.body.entry.forEach(function(entry) {
+      console.log('Entry:', entry);
+      
+      // Vérifiez si l'entrée a des changements
+      if (entry.changes) {
+        entry.changes.forEach(function(change) {
+          // Afficher les changements dans la console
+          console.log('Change:', JSON.stringify(change, null, 2));
+          
+          // Exemple : Si le changement concerne un post ajouté
+          if (change.field === 'feed' && change.value.item === 'post' && change.value.verb === 'add') {
+            var postId = change.value.post_id;
+
+            // Modifier le post en utilisant l'API Graph
+            var newMessage = 'Votre message modifié';
+            var url = `https://graph.facebook.com/${postId}`;
+
+            request({
+              url: url,
+              qs: { access_token: pageAccessToken },
+              method: 'POST',
+              json: { message: newMessage }
+            }, function(error, response, body) {
+              if (!error && response.statusCode == 200) {
+                console.log('Post modified successfully');
+              } else {
+                console.error('Failed to modify the post:', error || body);
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+  //==============================================
+
+  
   received_updates.unshift(req.body);
   res.sendStatus(200);
 });
