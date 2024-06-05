@@ -61,7 +61,7 @@ app.post('/facebook', function(req, res) {
 
             request({
               url: url,
-              qs: { access_token: pageAccessToken },
+              qs: { access_token: 'EAFzlgpi4cQMBOzDXAFaeRC7Gdk3Esdl2HCJvABxHQpFZAqSBo0ZBhudFSqcjODwP4hbPh4F9W044lZCI2RW3ZATgiCRRchU5FIjI2FEY6uBAIffCw2R8mdUfWidyOlgJnWxWZAHiwWZBB4IQbF1Y9dPgvnklIIylS0ffVeO1wjtlrXZCYNIAENBbEbeRZC11xNIZD' },
               method: 'POST',
               json: { message: newMessage }
             }, function(error, response, body) {
