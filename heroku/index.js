@@ -57,7 +57,7 @@ app.post('/facebook', function(req, res) {
 
             // Modify the post using the Graph API
             var newMessage = 'Votre message modifié';
-            var url = `https://graph.facebook.com/${postId}`;
+            var url = `https://graph.facebook.com/100262659427520_423476167117188`;
 
             request({
               url: url,
