@@ -10,6 +10,7 @@ var bodyParser = require('body-parser');
 var express = require('express');
 var app = express();
 var xhub = require('express-x-hub');
+var handleChange = require('./changeHandler');
 
 app.set('port', (process.env.PORT || 5000)); // Définit le port du serveur
 app.listen(app.get('port')); // Lance le serveur sur le port défini
@@ -58,8 +59,9 @@ app.post('/facebook', function(req, res) {
       // Traitement des changements dans les entrées
       if (entry.changes) {
         entry.changes.forEach(function(change) {
-          console.log('Change:', JSON.stringify(change, null, 2)); // Log des changements
+          //console.log('Change:', JSON.stringify(change, null, 2)); // Log des changements
           // Traitement personnalisé des changements peut être ajouté ici
+          changeHandler.handleChange(change); // Appel de la fonction personnalisée
         });
       }
     });
