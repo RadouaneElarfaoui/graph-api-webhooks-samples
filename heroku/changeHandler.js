@@ -6,7 +6,7 @@
  */
 function handleChange(change) {
   console.log('Handling change:', JSON.stringify(change, null, 2));
-    if (change.value && change.value.verb === "edited") { // Vérifie si le changement concerne une édition
+    /*if (change.value && change.value.verb === "edited") { // Vérifie si le changement concerne une édition
       // Extrait les informations pertinentes du changement
       const postId = change.value.post_id;
       const message = change.value.message;
@@ -17,7 +17,7 @@ function handleChange(change) {
       
       // Affiche un message indiquant que le post a été modifié
       //console.log(`Le post avec l'ID ${postId} a été modifié.`);
-    }
+    }*/
   
  
   // Ajoutez ici plus de logique de traitement selon vos besoins
