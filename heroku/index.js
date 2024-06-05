@@ -41,36 +41,36 @@ app.get(['/facebook', '/instagram'], function(req, res) {
 
 // Route POST pour les mises à jour Facebook
 app.post('/facebook', function(req, res) {
-  console.log('Facebook request body:', req.body); // Log du corps de la requête
+  console.log('Facebook request body:', req.body);
 
-  if (!req.isXHubValid()) { // Vérifie la validité de la signature de la requête
+  if (!req.isXHubValid()) {
     console.log('Warning - request header X-Hub-Signature not present or invalid');
-    res.sendStatus(401); // Répond avec un statut 401 si la signature est invalide
+    res.sendStatus(401);
     return;
   }
 
-  console.log('request header X-Hub-Signature validated'); // Log de validation de la signature
+  console.log('request header X-Hub-Signature validated');
 
-  // Traitement des mises à jour Facebook
   if (req.body.entry) {
     req.body.entry.forEach(function(entry) {
-      console.log('Entry:', entry); // Log de l'entrée
+      console.log('Entry:', entry);
 
-      // Traitement des changements dans les entrées
       if (entry.changes) {
         entry.changes.forEach(function(change) {
-          //console.log('Change:', JSON.stringify(change, null, 2)); // Log des changements
-          // Traitement personnalisé des changements peut être ajouté ici
-          changeHandler.handleChange(change); // Appel de la fonction personnalisée
+          console.log('Change:', JSON.stringify(change, null, 2));
+          try {
+            handleChange(change); // Appel de la fonction personnalisée
+          } catch (error) {
+            console.error('Error handling change:', error);
+          }
         });
       }
     });
   }
 
-  received_updates.unshift(req.body); // Ajoute la mise à jour reçue en début de tableau
-  res.sendStatus(200); // Répond avec un statut 200 pour indiquer que la requête a été traitée avec succès
+  received_updates.unshift(req.body);
+  res.sendStatus(200);
 });
-
 // Route POST pour les mises à jour Instagram
 app.post('/instagram', function(req, res) {
   console.log('Instagram request body:');
