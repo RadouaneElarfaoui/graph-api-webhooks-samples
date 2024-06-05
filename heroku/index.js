@@ -11,90 +11,72 @@ var express = require('express');
 var app = express();
 var xhub = require('express-x-hub');
 
-app.set('port', (process.env.PORT || 5000));
-app.listen(app.get('port'));
+app.set('port', (process.env.PORT || 5000)); // Définit le port du serveur
+app.listen(app.get('port')); // Lance le serveur sur le port défini
 
-app.use(xhub({ algorithm: 'sha1', secret: process.env.APP_SECRET }));
-app.use(bodyParser.json());
+app.use(xhub({ algorithm: 'sha1', secret: process.env.APP_SECRET })); // Middleware pour valider les signatures des requêtes
+app.use(bodyParser.json()); // Middleware pour parser les corps de requêtes en JSON
 
-var token = process.env.TOKEN || 'token';
-var received_updates = [];
+var token = process.env.TOKEN || 'token'; // Jeton de vérification pour les webhooks
+var received_updates = []; // Tableau pour stocker les mises à jour reçues
 
+// Route GET racine pour afficher les mises à jour reçues
 app.get('/', function(req, res) {
-  console.log(req);
-  res.send('<pre>' + JSON.stringify(received_updates, null, 2) + '</pre>');
+  console.log(req); // Log de la requête pour le debug
+  res.send('<pre>' + JSON.stringify(received_updates, null, 2) + '</pre>'); // Affiche les mises à jour en format JSON
 });
 
+// Route GET pour la vérification des webhooks Facebook et Instagram
 app.get(['/facebook', '/instagram'], function(req, res) {
   if (
     req.query['hub.mode'] == 'subscribe' &&
     req.query['hub.verify_token'] == token
   ) {
-    res.send(req.query['hub.challenge']);
+    res.send(req.query['hub.challenge']); // Répond avec le challenge pour vérifier le webhook
   } else {
-    res.sendStatus(400);
+    res.sendStatus(400); // Répond avec un statut 400 si la vérification échoue
   }
 });
 
+// Route POST pour les mises à jour Facebook
 app.post('/facebook', function(req, res) {
-  console.log('Facebook request body:', req.body);
-  if (!req.isXHubValid()) {
+  console.log('Facebook request body:', req.body); // Log du corps de la requête
+
+  if (!req.isXHubValid()) { // Vérifie la validité de la signature de la requête
     console.log('Warning - request header X-Hub-Signature not present or invalid');
-    res.sendStatus(401);
+    res.sendStatus(401); // Répond avec un statut 401 si la signature est invalide
     return;
   }
 
-  console.log('request header X-Hub-Signature validated');
-  // Process the Facebook updates here
-// Parcourir les entrées dans le corps de la requête
+  console.log('request header X-Hub-Signature validated'); // Log de validation de la signature
+
+  // Traitement des mises à jour Facebook
   if (req.body.entry) {
     req.body.entry.forEach(function(entry) {
-      console.log('Entry:', entry);
-      
-      // Vérifiez si l'entrée a des changements
+      console.log('Entry:', entry); // Log de l'entrée
+
+      // Traitement des changements dans les entrées
       if (entry.changes) {
         entry.changes.forEach(function(change) {
-          // Afficher les changements dans la console
-          console.log('Change:', JSON.stringify(change, null, 2));
-          
-          // Exemple : Si le changement concerne un post ajouté
-          if (change.field === 'feed' && change.value.item === 'post' && change.value.verb === 'add') {
-            var postId = change.value.post_id;
-
-            // Modifier le post en utilisant l'API Graph
-            var newMessage = 'Votre message modifié';
-            var url = `https://graph.facebook.com/${postId}`;
-
-            request({
-              url: url,
-              qs: { access_token: pageAccessToken },
-              method: 'POST',
-              json: { message: newMessage }
-            }, function(error, response, body) {
-              if (!error && response.statusCode == 200) {
-                console.log('Post modified successfully');
-              } else {
-                console.error('Failed to modify the post:', error || body);
-              }
-            });
-          }
+          console.log('Change:', JSON.stringify(change, null, 2)); // Log des changements
+          // Traitement personnalisé des changements peut être ajouté ici
         });
       }
     });
   }
-  //==============================================
 
-  
-  received_updates.unshift(req.body);
-  res.sendStatus(200);
+  received_updates.unshift(req.body); // Ajoute la mise à jour reçue en début de tableau
+  res.sendStatus(200); // Répond avec un statut 200 pour indiquer que la requête a été traitée avec succès
 });
 
+// Route POST pour les mises à jour Instagram
 app.post('/instagram', function(req, res) {
   console.log('Instagram request body:');
-  console.log(req.body);
-  // Process the Instagram updates here
-  received_updates.unshift(req.body);
-  res.sendStatus(200);
+  console.log(req.body); // Log du corps de la requête
+
+  // Traitement des mises à jour Instagram
+  received_updates.unshift(req.body); // Ajoute la mise à jour reçue en début de tableau
+  res.sendStatus(200); // Répond avec un statut 200 pour indiquer que la requête a été traitée avec succès
 });
 
-app.listen();
+app.listen(); // Démarre le serveur
